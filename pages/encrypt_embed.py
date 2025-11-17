@@ -103,18 +103,21 @@ if st.button("🚀 Encrypt and Embed", type="primary", use_container_width=True)
                     psnr = ImageMetrics.calculate_psnr(temp_cover_path, temp_stego_path)
                     ssim = ImageMetrics.calculate_ssim(temp_cover_path, temp_stego_path)
                     
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        st.metric("PSNR", f"{psnr:.2f} dB", help="Higher is better (>40 dB is excellent)")
-                    with col2:
-                        st.metric("SSIM", f"{ssim:.4f}", help="Closer to 1.0 is better")
-                    
-                    if psnr > 40:
-                        st.success("✅ Excellent image quality maintained!")
-                    elif psnr > 30:
-                        st.info("ℹ️ Good image quality")
+                    if psnr is not None and ssim is not None:
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            st.metric("PSNR", f"{psnr:.2f} dB", help="Higher is better (>40 dB is excellent)")
+                        with col2:
+                            st.metric("SSIM", f"{ssim:.4f}", help="Closer to 1.0 is better")
+                        
+                        if psnr > 40:
+                            st.success("✅ Excellent image quality maintained!")
+                        elif psnr > 30:
+                            st.info("ℹ️ Good image quality")
+                        else:
+                            st.warning("⚠️ Image quality may be noticeably degraded")
                     else:
-                        st.warning("⚠️ Image quality may be noticeably degraded")
+                        st.warning("⚠️ Could not calculate quality metrics")
                 
                 st.markdown("---")
                 st.subheader("📥 Download Stego-Image")

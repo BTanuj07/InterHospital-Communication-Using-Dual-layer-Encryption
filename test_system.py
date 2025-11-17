@@ -59,15 +59,19 @@ def test_encryption_decryption():
     print("-" * 60)
     psnr = ImageMetrics.calculate_psnr(test_image_path, stego_image_path)
     ssim = ImageMetrics.calculate_ssim(test_image_path, stego_image_path)
-    print(f"   PSNR: {psnr:.2f} dB")
-    print(f"   SSIM: {ssim:.4f}")
     
-    if psnr > 40:
-        print(f"   ✅ Excellent image quality!")
-    elif psnr > 30:
-        print(f"   ✅ Good image quality")
+    if psnr is not None and ssim is not None:
+        print(f"   PSNR: {psnr:.2f} dB")
+        print(f"   SSIM: {ssim:.4f}")
+        
+        if psnr > 40:
+            print(f"   ✅ Excellent image quality!")
+        elif psnr > 30:
+            print(f"   ✅ Good image quality")
+        else:
+            print(f"   ⚠️  Image quality degraded")
     else:
-        print(f"   ⚠️  Image quality degraded")
+        print(f"   ⚠️  Could not calculate quality metrics")
     
     print(f"\n🔍 Step 5: LSB Extraction")
     print("-" * 60)

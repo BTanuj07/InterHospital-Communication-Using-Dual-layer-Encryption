@@ -66,7 +66,12 @@ Your knowledge includes:
 
 Provide clear, concise, and helpful responses. Use examples when appropriate. Be professional but friendly."""
 
-            messages_for_api = [{"role": "system", "content": system_prompt}] + st.session_state.messages
+            from typing import cast
+            from openai.types.chat import ChatCompletionMessageParam
+            
+            messages_for_api: list[ChatCompletionMessageParam] = [
+                {"role": "system", "content": system_prompt}
+            ] + cast(list[ChatCompletionMessageParam], st.session_state.messages)
             
             # the newest OpenAI model is "gpt-5" which was released August 7, 2025.
             # do not change this unless explicitly requested by the user
