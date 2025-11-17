@@ -176,15 +176,38 @@ if st.button("🚀 Encrypt and Embed", type="primary", use_container_width=True)
                         st.warning("⚠️ Could not calculate quality metrics")
                 
                 st.markdown("---")
-                st.subheader("📥 Download Stego-Image")
+                st.subheader("🔍 Image Quality Comparison")
                 
-                col1, col2 = st.columns(2)
+                diff_stats = ImageMetrics.calculate_difference_stats(temp_cover_path, temp_stego_path)
+                heatmap_image = ImageMetrics.create_difference_heatmap(temp_cover_path, temp_stego_path)
+                
+                if diff_stats:
+                    col1, col2, col3, col4 = st.columns(4)
+                    with col1:
+                        st.metric("Total Pixels", f"{diff_stats['total_pixels']:,}")
+                    with col2:
+                        st.metric("Changed Pixels", f"{diff_stats['changed_pixels']:,}")
+                    with col3:
+                        st.metric("Change %", f"{diff_stats['change_percentage']:.4f}%")
+                    with col4:
+                        st.metric("Max Diff", f"{diff_stats['max_difference']:.2f}")
+                
+                col1, col2, col3 = st.columns(3)
                 
                 with col1:
                     st.image(cover_image, caption="Original Cover Image", use_container_width=True)
                 
                 with col2:
                     st.image(stego_image, caption="Stego-Image (with hidden data)", use_container_width=True)
+                
+                with col3:
+                    if heatmap_image:
+                        st.image(heatmap_image, caption="Pixel Difference Heatmap", use_container_width=True)
+                    else:
+                        st.warning("Could not generate heatmap")
+                
+                st.markdown("---")
+                st.subheader("📥 Download Stego-Image")
                 
                 buf = BytesIO()
                 stego_image.save(buf, format='PNG')
