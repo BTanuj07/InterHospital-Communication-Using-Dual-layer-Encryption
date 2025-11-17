@@ -5,7 +5,7 @@ from io import BytesIO
 from PIL import Image
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from utils.dna_encryption import DNAEncryption
+from utils.dna_encryption import DNAEncryption, AES256DNAEncryption
 from utils.lsb_steganography import LSBSteganography
 from utils.metrics import ImageMetrics
 
@@ -20,11 +20,35 @@ with col1:
     st.subheader("📝 Step 1: Enter Secret Message")
     secret_message = st.text_area(
         "Enter the medical data or message to encrypt:",
-        height=150,
+        height=120,
         placeholder="e.g., Patient ID: 12345, Diagnosis: ..., Treatment: ..."
     )
     
-    st.subheader("🖼️ Step 2: Upload Cover Image")
+    st.subheader("🔒 Step 2: Encryption Options")
+    use_aes = st.checkbox("🛡️ Enable AES-256 Encryption (Military-Grade Security)", value=False, 
+                          help="Add an additional AES-256 encryption layer before DNA encoding")
+    
+    encryption_key = None
+    if use_aes:
+        col_a, col_b = st.columns([3, 1])
+        with col_a:
+            encryption_key = st.text_input(
+                "Encryption Key (Base64, 44 characters)",
+                type="password",
+                placeholder="Leave empty to auto-generate",
+                help="Enter a Base64-encoded key (44 chars) or leave empty to auto-generate"
+            )
+        with col_b:
+            if st.button("🔑 Generate", help="Generate random key"):
+                import base64
+                import os
+                st.session_state.generated_key = base64.b64encode(os.urandom(32)).decode('utf-8')
+        
+        if 'generated_key' in st.session_state:
+            encryption_key = st.session_state.generated_key
+            st.info(f"🔑 Generated Key: `{encryption_key}`")
+    
+    st.subheader("🖼️ Step 3: Upload Cover Image")
     cover_image = st.file_uploader(
         "Choose an image to hide the data in:",
         type=['png', 'jpg', 'jpeg', 'bmp'],
@@ -37,14 +61,26 @@ with col1:
 with col2:
     st.subheader("🔄 Processing Pipeline")
     
-    st.markdown("""
-    **Encryption Steps:**
-    1. Text → Binary Conversion
-    2. Binary → DNA Encoding (00→A, 01→T, 10→C, 11→G)
-    3. DNA Symmetric Substitution (A↔T, C↔G)
-    4. LSB Embedding into image pixels
-    5. Add end marker for extraction
-    """)
+    if use_aes:
+        st.markdown("""
+        **Enhanced Encryption Steps (AES-256 + DNA):**
+        1. Text → AES-256 Encryption
+        2. Encrypted Data → Base64 Encoding
+        3. Base64 → Binary Conversion
+        4. Binary → DNA Encoding (00→A, 01→T, 10→C, 11→G)
+        5. DNA Symmetric Substitution (A↔T, C↔G)
+        6. LSB Embedding into image pixels
+        """)
+        st.success("🛡️ **Military-grade security enabled!**")
+    else:
+        st.markdown("""
+        **Standard Encryption Steps:**
+        1. Text → Binary Conversion
+        2. Binary → DNA Encoding (00→A, 01→T, 10→C, 11→G)
+        3. DNA Symmetric Substitution (A↔T, C↔G)
+        4. LSB Embedding into image pixels
+        5. Add end marker for extraction
+        """)
     
     if secret_message and cover_image:
         st.success(f"✅ Message length: {len(secret_message)} characters")
@@ -57,16 +93,36 @@ if st.button("🚀 Encrypt and Embed", type="primary", use_container_width=True)
         st.error("❌ Please enter a secret message")
     elif not cover_image:
         st.error("❌ Please upload a cover image")
+    elif use_aes and not encryption_key:
+        st.error("❌ Please provide an encryption key or generate one")
     else:
         with st.spinner("Processing encryption and embedding..."):
             temp_cover_path = None
             temp_stego_path = None
             try:
-                dna_enc = DNAEncryption()
+                if use_aes:
+                    import base64
+                    try:
+                        decoded_key = base64.b64decode(encryption_key) if encryption_key else None
+                        dna_enc = AES256DNAEncryption(key=decoded_key)
+                        actual_key = dna_enc.get_key_base64()
+                    except Exception as e:
+                        st.error(f"❌ Invalid Base64 key format. Please check your key or generate a new one.")
+                        raise
+                else:
+                    dna_enc = DNAEncryption()
+                    actual_key = None
+                
                 lsb_steg = LSBSteganography()
                 
                 with st.expander("🔬 DNA Encryption Process", expanded=True):
-                    encryption_result = dna_enc.encrypt(secret_message)
+                    if use_aes:
+                        encryption_result = dna_enc.encrypt(secret_message, use_aes=True)
+                        st.success(f"🔐 AES-256 + DNA encryption applied")
+                        st.code(f"Encryption Key (Base64): {actual_key}", language="text")
+                        st.warning("⚠️ **IMPORTANT**: Save this key! You'll need it for decryption.")
+                    else:
+                        encryption_result = dna_enc.encrypt(secret_message)
                     
                     col1, col2, col3 = st.columns(3)
                     with col1:
@@ -150,9 +206,10 @@ if st.button("🚀 Encrypt and Embed", type="primary", use_container_width=True)
                     'message_length': len(secret_message),
                     'encryption_time': encryption_result['encryption_time'],
                     'embedding_time': embedding_result['embedding_time'],
-                    'psnr': psnr,
-                    'ssim': ssim,
-                    'dna_length': encryption_result['dna_length']
+                    'psnr': psnr if psnr else 0,
+                    'ssim': ssim if ssim else 0,
+                    'dna_length': encryption_result['dna_length'],
+                    'used_aes': use_aes
                 })
                 
                 st.success("✅ Encryption and embedding completed successfully!")

@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Add your description here"
 requires-python = ">=3.11"
 dependencies = [
+    "cryptography>=46.0.3",
     "numpy>=2.3.5",
     "openai>=2.8.0",
     "opencv-python>=4.11.0.86",
