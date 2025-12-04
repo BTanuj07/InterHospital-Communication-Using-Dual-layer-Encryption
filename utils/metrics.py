@@ -53,35 +53,36 @@ class ImageMetrics:
     def create_difference_heatmap(original_image_path, stego_image_path):
         img1 = cv2.imread(original_image_path)
         img2 = cv2.imread(stego_image_path)
-        
+
         if img1 is None or img2 is None:
             return None
-        
+
         if img1.shape != img2.shape:
             img2 = cv2.resize(img2, (img1.shape[1], img1.shape[0]))
-        
+
         diff = cv2.absdiff(img1, img2)
         diff_magnitude = np.sqrt(np.sum(diff**2, axis=2))
-        
+
         diff_normalized = (diff_magnitude - diff_magnitude.min()) / (diff_magnitude.max() - diff_magnitude.min() + 1e-8)
         diff_normalized = (diff_normalized * 255).astype(np.uint8)
-        
+
         fig, ax = plt.subplots(figsize=(10, 8))
         im = ax.imshow(diff_normalized, cmap='hot', interpolation='nearest')
         ax.set_title('Pixel Difference Heatmap (LSB Changes)', fontsize=14, fontweight='bold')
         ax.axis('off')
-        
+
         cbar = plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
         cbar.set_label('Difference Magnitude', rotation=270, labelpad=20)
-        
+
         plt.tight_layout()
-        
         fig.canvas.draw()
-        heatmap_array = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8)
-        heatmap_array = heatmap_array.reshape(fig.canvas.get_width_height()[::-1] + (3,))
-        
+
+        # FIXED for Matplotlib 3.8+
+        rgba = np.asarray(fig.canvas.buffer_rgba())
+        heatmap_array = rgba[..., :3]
+
         plt.close(fig)
-        
+
         heatmap_image = Image.fromarray(heatmap_array)
         return heatmap_image
     
